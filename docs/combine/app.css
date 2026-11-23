@@ -264,3 +264,11 @@ textarea.input { height: auto; min-height: 84px; padding: 10px 12px; resize: ver
   .search input { width: 100%; }
   .search { flex: 1; }
 }
+
+/* AI 기획안 작성 상태 (Research "기획안으로 발전" · "AI로 작성") */
+.ai-state { display: flex; gap: 12px; align-items: center; border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; margin: 4px 0 14px; background: var(--line-soft); font-size: 13px; }
+.ai-state b { display: block; font-size: 13.5px; margin-bottom: 2px; }
+.ai-state .grow { flex: 1; }
+.ai-state.fail { border-color: var(--danger); background: #fff; }
+.spin { width: 18px; height: 18px; flex: none; border: 2px solid var(--line); border-top-color: var(--ink); border-radius: 50%; animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }

@@ -61,11 +61,11 @@ function addProposals(added) {
   return data.items.length;
 }
 
-/* deck-agent: 기존 기획안에 PPT 원고만 추가 (쓰기 직전 다시 읽어 병합) */
-function patchDecks(decks) {
+/* deck-agent: 기존 기획안에 PPT 원고·KPI 반영 (쓰기 직전 다시 읽어 병합) */
+function patchDecks(res, apply) {
   const data = readProposals();
   let n = 0;
-  for (const p of data.items) if (decks[p.id] && !p.deck) { p.deck = decks[p.id]; n++; }
+  for (const p of data.items) if (apply(p, res[p.id])) n++;
   if (n) writeDataFile(OUT, 'CSR_PROPOSALS', data, 'AI CSR 제안 — tools/csr-proposal-agent.js(매시간)·csr-develop-agent.js(사례 발전 요청)가 기획안을 추가합니다.');
   return n;
 }

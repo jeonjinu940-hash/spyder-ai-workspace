@@ -17,7 +17,7 @@ const SITE_FILES = ['index.html', 'projects.js', 'combine/index.html', 'combine/
 const SITE_DIRS = ['assets'];
 /* 클라우드에서 실행할 코드 */
 const CODE_FILES = ['tools/claude-runner.js', 'tools/research-agent.js', 'tools/proposal-agent.js', 'tools/csr-common.js',
-  'tools/csr-research-agent.js', 'tools/csr-proposal-agent.js', 'tools/deck-agent.js', 'tools/deck-spec.js', 'tools/cloud-common.js', 'tools/cloud-config.json', 'tools/cloud-run.js', 'tools/web-gate.js'];
+  'tools/csr-research-agent.js', 'tools/csr-proposal-agent.js', 'tools/deck-agent.js', 'tools/deck-spec.js', 'tools/combine-data.js', 'tools/cloud-common.js', 'tools/cloud-config.json', 'tools/cloud-run.js', 'tools/web-gate.js'];
 /* [원본 경로(tools/cloud/...), 저장소 경로] */
 const MAPPED_FILES = [['tools/cloud/hourly.yml', '.github/workflows/hourly.yml'], ['tools/cloud/gitignore.txt', '.gitignore'], ['tools/cloud/README.md', 'README.md']];
 
@@ -49,7 +49,9 @@ function union(a = [], b = [], key) {
   const bm = new Map(b.map(x => [key(x), x]));
   const seen = new Set(a.map(key));
   // 같은 항목이면 a 우선, 단 PPT 원고(deck)는 한쪽에만 있어도 보존 (클라우드·PC 어느 쪽에서 작성돼도 유지)
-  const aa = a.map(x => { const o = bm.get(key(x)); return !x.deck && o && o.deck ? { ...x, deck: o.deck } : x; });
+  // 같은 항목이면 a 우선, 단 PPT 원고(deck)는 더 새 버전(v) 쪽을 쓰고 그때 KPI 도 함께 가져옴
+  const ver = x => (x && x.deck ? x.deck.v || 1 : 0);
+  const aa = a.map(x => { const o = bm.get(key(x)); return o && ver(o) > ver(x) ? { ...x, deck: o.deck, kpis: o.kpis || x.kpis } : x; });
   return [...aa, ...b.filter(x => { const k = key(x); if (seen.has(k)) return false; seen.add(k); return true; })];
 }
 const byDesc = k => (x, y) => String(y[k] || '').localeCompare(String(x[k] || ''));

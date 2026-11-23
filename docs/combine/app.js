@@ -189,6 +189,90 @@
   const allProposals = () => [...proposals('marketing'), ...proposals('sns')];
   const patchProposal = (id, obj) => { store.proposals[id] = { ...(store.proposals[id] || {}), ...obj, updated: TODAY_ISO }; save(); };
 
+  /* ───────── AI 기획안 작성 요청 (tools/local-server.js → 담당 기기의 combine-develop-agent.js) ───────── */
+  const AI_API = 'http://127.0.0.1:47821';
+  const AI_TIMEOUT_MS = 40 * 60 * 1000;
+  const pendingDrafts = () => store.newProposals.filter(p => p.aiReq && p.aiState === 'pending');
+  const researchPayload = r => ({ id: r.id, category: r.category, title: r.title, source: r.source, url: r.url, summary: r.summary, insight: r.insight, apply: r.apply });
+
+  async function requestAI(id) {
+    const d = store.newProposals.find(x => x.id === id);
+    if (!d) return;
+    const rmap = Object.fromEntries(research().map(r => [r.id, r]));
+    const p = { ...d, ...(store.proposals[id] || {}) };
+    const reqId = uid('rq');
+    const body = {
+      reqId, replaces: id,
+      research: (p.research || []).map(x => rmap[x]).filter(Boolean).map(researchPayload),
+      draft: { title: p.title, background: p.background, goal: p.goal, target: p.target, strategy: p.strategy, actions: p.actions || [] },
+    };
+    try {
+      // text/plain 으로 보내 사전 요청(preflight) 없이 전달
+      const res = await fetch(`${AI_API}/combine/develop`, { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(body) });
+      const j = await res.json();
+      if (!j.ok) throw new Error(j.error || '요청 거부');
+      Object.assign(d, { aiReq: reqId, aiState: 'pending', aiStep: 'queued', aiAt: new Date().toISOString(), aiError: '' });
+      save(); render();
+      toast('AI가 기획안을 작성하고 있습니다. 보통 3~6분 뒤 자동으로 채워집니다.');
+    } catch (e) {
+      Object.assign(d, { aiState: 'failed', aiError: e.message && !/fetch/i.test(e.message) ? e.message : '이 PC의 자동화 프로그램에 연결할 수 없습니다. "자동화 등록 (이 PC).cmd" 실행 여부를 확인하세요.' });
+      save(); render();
+      toast('AI 작성 요청에 실패했습니다. 초안은 직접 편집할 수 있습니다.');
+    }
+  }
+
+  /* AI 결과가 proposals.js 에 들어오면 초안을 AI 기획안으로 교체 */
+  function reconcileAI() {
+    const byReq = Object.fromEntries((PRO().marketing || []).filter(x => x.fromRequest).map(x => [x.fromRequest, x]));
+    const done = [];
+    let changed = false;
+    store.newProposals = store.newProposals.filter(d => {
+      const hit = d.aiReq && byReq[d.aiReq];
+      if (hit) {
+        const keep = store.proposals[d.id] && store.proposals[d.id].status;   // 사용자가 바꾼 상태는 유지
+        if (keep && keep !== '검토') store.proposals[hit.id] = { ...(store.proposals[hit.id] || {}), status: keep };
+        delete store.proposals[d.id];
+        if (ui.pSel === d.id) ui.pSel = hit.id;
+        done.push(hit.title); changed = true;
+        return false;
+      }
+      if (d.aiState === 'pending' && Date.now() - Date.parse(d.aiAt) > AI_TIMEOUT_MS) {
+        Object.assign(d, { aiState: 'failed', aiError: '응답 시간이 초과되었습니다. 다시 시도해 주세요.' }); changed = true;
+      }
+      return true;
+    });
+    if (changed) save();
+    return done;
+  }
+
+  async function pollAI() {
+    const list = pendingDrafts();
+    if (!list.length) return;
+    let st;
+    try { st = await (await fetch(`${AI_API}/combine/develop/status?ids=${list.map(d => d.aiReq).join(',')}`)).json(); } catch { return; }
+    let changed = false, finished = false;
+    for (const d of list) {
+      const s = st[d.aiReq] || '';
+      if (s === 'done') finished = true;
+      else if (s.startsWith('failed')) { Object.assign(d, { aiState: 'failed', aiError: s.slice(7) || 'AI 작성 실패' }); changed = true; }
+      else if ((s === 'queued' || s === 'working') && d.aiStep !== s) { d.aiStep = s; changed = true; }
+    }
+    if (changed) { save(); if (!busy()) render(); }
+    if (finished) refreshData();
+  }
+  const originLabel = x => x.ai ? (x.origin === 'develop' ? 'AI 기획 · 리서치 발전' : 'AI 제안')
+    : x.aiState === 'pending' ? 'AI 작성 중…' : x.aiState === 'failed' ? 'AI 작성 실패' : '직접 작성';
+  const aiBanner = p => {
+    if (p.ai) return '';
+    if (p.aiState === 'pending') return `
+      <div class="ai-state"><span class="spin"></span><div class="grow"><b>AI가 기획안을 작성하고 있습니다 · ${p.aiStep === 'working' ? '작성 중' : '대기 중'}</b>
+        <span class="muted">근거 리서치 원문과 컴바인 측정 데이터를 분석해 전략·실행 방안·예산·데이터 기반 KPI·PPT 원고를 채웁니다. 보통 3~6분, 완료되면 이 초안이 AI 기획안으로 자동 교체됩니다.</span></div></div>`;
+    if (p.aiState === 'failed') return `
+      <div class="ai-state fail"><div class="grow"><b>AI 작성에 실패했습니다</b><span class="muted">${esc(p.aiError || '')}</span></div>
+        <button class="btn btn-sm" data-act="aiWrite" data-id="${p.id}">${icon('spark', 'icon-sm')} 다시 시도</button></div>`;
+    return '';
+  };
+
   /* ───────── UI state ───────── */
   const ui = { rankK: 'm55', rCat: '전체', rQuery: '', pTab: 'marketing', pSel: null, pFilter: '전체', pLimit: 50, oFilter: '전체', sFilter: '업로드 전', kSel: null };
   const prioBadge = p => `<span class="badge ${p === '높음' ? 'b-dark' : p === '중간' ? '' : 'b-line'}">우선순위 ${esc(p)}</span>`;
@@ -382,7 +466,7 @@
             <button class="p-item ${x.id === ui.pSel ? 'on' : ''}" data-act="pSel" data-id="${x.id}">
               <div style="display:flex;gap:6px;flex-wrap:wrap"><span class="badge ${pStatusTone[x.status] || ''}">${esc(x.status)}</span>${prioBadge(x.priority)}${type === 'sns' && x.format ? `<span class="badge b-line">${esc(x.format)}</span>` : ''}</div>
               <div class="t">${esc(x.title)}</div>
-              <div class="muted" style="font-size:12px">${x.ai ? 'AI 제안' : '직접 작성'} · ${x.created ? fmtTime(x.created) : fmtFull(x.updated)}</div>
+              <div class="muted" style="font-size:12px">${originLabel(x)} · ${x.created ? fmtTime(x.created) : fmtFull(x.updated)}</div>
             </button>`).join('') + (list.length > ui.pLimit ? `<button class="btn btn-ghost" style="width:100%;margin-top:6px" data-act="pMore">더 보기 (${list.length - ui.pLimit}건)</button>` : '') : '<div class="empty">해당 조건의 제안이 없습니다.</div>'}
         </div>
         ${p ? (type === 'sns' ? snsDetail(p) : mkDetail(p)) : '<div class="panel empty">제안을 선택하세요.</div>'}
@@ -431,11 +515,14 @@
   }
 
   function mkDetail(p) {
+    const canAI = !p.ai && store.newProposals.some(x => x.id === p.id) && p.aiState !== 'pending' && p.aiState !== 'failed';
     return `
         <div class="panel p-detail">
+          ${aiBanner(p)}
           <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start">
             <div style="display:flex;gap:6px;align-items:center">${statusSelect(p)}${prioBadge(p.priority)}</div>
             <div class="toolbar">
+              ${canAI ? `<button class="btn btn-sm" data-act="aiWrite" data-id="${p.id}">${icon('spark', 'icon-sm')} AI로 작성</button>` : ''}
               <button class="btn btn-ghost btn-sm" data-act="editProposal" data-id="${p.id}">${icon('edit', 'icon-sm')} 편집</button>
               <button class="btn btn-sm" data-act="ppt" data-id="${p.id}">${icon('proposal', 'icon-sm')} PPT 기획안 미리보기</button>
             </div>
@@ -669,6 +756,8 @@
   const route = () => { const r = location.hash.replace(/^#\/?/, '').split('?')[0]; return ROUTES[r] ? r : 'dashboard'; };
 
   function render() {
+    const doneAI = reconcileAI();
+    if (doneAI.length) setTimeout(() => toast(`AI 기획안 작성 완료: ${doneAI[0]}${doneAI.length > 1 ? ` 외 ${doneAI.length - 1}건` : ''}`), 0);
     const r = route(), R = ROUTES[r];
     const n = detectTasks().length;
     $('#nav').innerHTML = Object.entries(ROUTES).map(([k, v], i) => `
@@ -708,6 +797,7 @@
     }
   }
   setInterval(refreshData, 30000);
+  setInterval(pollAI, 15000);
 
   /* ───────── Modal / Toast ───────── */
   function modal(html, wide = false) {
@@ -905,8 +995,10 @@
       ui.pTab = 'marketing';
       store.newProposals.push({ id: nid, type: 'marketing', title: `${r.title} – 컴바인 적용안`, status: '검토', priority: r.priority, created: new Date().toISOString(), updated: TODAY_ISO,
         background: r.summary, goal: '', target: '', strategy: r.apply, actions: [], budget: [], effect: '', kpis: [], research: [r.id] });
-      save(); ui.pSel = nid; ui.pFilter = '전체'; location.hash = '#/proposal'; toast('기획안 초안이 생성되었습니다. 편집으로 내용을 채워주세요.');
+      save(); ui.pSel = nid; ui.pFilter = '전체'; location.hash = '#/proposal';
+      requestAI(nid);   // AI가 리서치를 분석해 전체 기획안 작성 → 완료 시 초안 자동 교체
     },
+    aiWrite: el => requestAI(el.dataset.id),
 
     pFilter: el => { ui.pFilter = el.dataset.v; ui.pSel = null; ui.pLimit = 50; render(); },
     pSel: el => { ui.pSel = el.dataset.id; render(); },
