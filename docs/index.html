@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SPYDER AI Workspace</title>
+<link rel="icon" type="image/png" href="assets/img/spyder-spider.png">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="stylesheet" href="assets/css/base.css">
+<style>
+  .hub-top { max-width: 1180px; margin: 0 auto; padding: 28px 32px; display: flex; justify-content: space-between; align-items: center; }
+  .hub-top .date { font-size: 13px; color: var(--muted); }
+  .hub { max-width: 1180px; margin: 0 auto; padding: 24px 32px 80px; }
+  .hero { padding: 36px 0 34px; position: relative; }
+  .panel-hub { position: relative; overflow: hidden; }
+  .panel-mark { position: absolute; right: -30px; bottom: -60px; height: 340px; opacity: .04; pointer-events: none; }
+  .panel-hub > div { position: relative; }
+  .hero h1 { font-size: 40px; font-weight: 700; letter-spacing: -.035em; margin-top: 10px; line-height: 1.2; }
+  .hero p { margin-top: 12px; font-size: 16px; color: var(--muted); }
+
+  .tabs { display: flex; gap: 6px; overflow-x: auto; padding: 6px; border-radius: 14px; scrollbar-width: none; }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab {
+    display: flex; align-items: center; gap: 8px; height: 46px; padding: 0 18px; border-radius: 10px;
+    font-weight: 600; font-size: 14px; color: var(--ink-2); white-space: nowrap; transition: .15s;
+  }
+  .tab:hover { background: rgba(255,255,255,.8); }
+  .tab.on { background: var(--ink); color: #fff; }
+  .tab .st { width: 6px; height: 6px; border-radius: 50%; background: var(--faint); }
+  .tab .st.live { background: var(--ok); }
+  .tab.on .st.live { background: #7ee2a8; }
+  .tab.add { color: var(--muted); border: 1px dashed var(--faint); }
+
+  .tabs-row { display: flex; gap: 8px; align-items: stretch; }
+  .tabs-row .tabs { flex: 1; min-width: 0; }
+  .edit-btn { flex: none; height: auto; padding: 0 16px; border-radius: 14px; font-size: 13px; }
+  .tabs.editing { outline: 1.5px dashed var(--faint); outline-offset: 2px; }
+  .tab.edit { cursor: grab; padding: 0 8px 0 10px; background: rgba(255,255,255,.85); border: 1px solid var(--line); color: var(--ink); }
+  .tab.edit.dragging { opacity: .35; }
+  .tab.edit.over { border-color: var(--ink); }
+  .tab .grip { color: var(--faint); font-size: 12px; letter-spacing: -2px; margin-right: 2px; }
+  .tab .ctl { display: inline-flex; gap: 2px; margin-left: 6px; }
+  .tab .ctl button { width: 26px; height: 26px; border-radius: 7px; color: var(--muted); font-size: 14px; display: grid; place-items: center; }
+  .tab .ctl button:hover { background: var(--line-soft); color: var(--ink); }
+  .tab .ctl button.del:hover { background: #fde8e8; color: var(--danger); }
+  .tab .ctl button:disabled { opacity: .25; pointer-events: none; }
+  .edit-hint { margin: 10px 4px 0; font-size: 12.5px; color: var(--muted); }
+  .restore { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+  .restore .r { display: flex; justify-content: space-between; align-items: center; gap: 10px; background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px 10px 16px; color: var(--ink); font-weight: 600; font-size: 13.5px; }
+
+  .panel-hub { margin-top: 18px; border-radius: 22px; padding: 40px; display: grid; grid-template-columns: 1.25fr 1fr; gap: 40px; min-height: 420px; }
+  .panel-hub h2 { font-size: 32px; font-weight: 700; letter-spacing: -.03em; margin: 12px 0 10px; }
+  .panel-hub .desc { color: var(--ink-2); font-size: 15px; max-width: 520px; }
+  .mods { margin-top: 26px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .mod { background: rgba(255,255,255,.75); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; }
+  .mod b { display: block; font-size: 13.5px; }
+  .mod small { color: var(--muted); font-size: 12px; }
+  .mod .n { font-size: 11px; color: var(--faint); font-weight: 700; letter-spacing: .1em; }
+  .cta { margin-top: 30px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .cta .btn { height: 46px; padding: 0 22px; font-size: 14px; border-radius: 11px; }
+
+  .side-stats { display: flex; flex-direction: column; gap: 12px; }
+  .stat { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px; display: flex; justify-content: space-between; align-items: flex-end; }
+  .stat .v { font-size: 30px; font-weight: 700; letter-spacing: -.03em; line-height: 1; }
+  .stat .l { font-size: 12.5px; color: var(--muted); }
+  .stat .s { font-size: 12px; color: var(--muted); text-align: right; }
+  .soon { border: 1px dashed var(--faint); border-radius: 16px; padding: 28px; display: flex; flex-direction: column; justify-content: center; gap: 10px; color: var(--muted); background: rgba(255,255,255,.4); }
+  .soon b { color: var(--ink); font-size: 16px; }
+
+  footer { text-align: center; color: var(--faint); font-size: 12px; padding: 0 0 40px; }
+
+  @media (max-width: 860px) {
+    .hub-top, .hub { padding-left: 16px; padding-right: 16px; }
+    .hero h1 { font-size: 30px; }
+    .panel-hub { grid-template-columns: 1fr; padding: 24px; gap: 24px; }
+    .mods { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="bg-orbs"></div>
+
+<header class="hub-top">
+  <div class="brand"><img src="assets/img/spyder-wordmark.png" alt="SPYDER"><span>SPORTS MARKETING AI WORKSPACE</span></div>
+  <div class="date" id="today"></div>
+</header>
+
+<main class="hub">
+  <section class="hero">
+    <div class="eyebrow">AI Automation Hub</div>
+    <h1>업무를 선택하세요</h1>
+    <p>AI가 조사하고, 분석하고, 제안하고, 업무 진행까지 관리합니다.</p>
+  </section>
+
+  <div class="tabs-row">
+    <nav class="tabs glass" id="tabs" role="tablist"></nav>
+    <button class="btn btn-ghost edit-btn" id="edit-btn">탭 편집</button>
+  </div>
+  <div class="edit-hint" id="edit-hint" hidden>탭을 끌어서 놓거나 ‹ › 버튼으로 순서를 바꾸고, × 로 삭제할 수 있습니다. 삭제한 탭은 '업무 추가'에서 다시 복원할 수 있습니다.</div>
+  <section class="panel-hub glass" id="panel"></section>
+</main>
+
+<footer>SPYDER Korea · Sports Marketing Team</footer>
+
+<script src="projects.js"></script>
+<script src="assets/web-gate.js"></script>
+<script type="text/x-spyder-skip"></script>
+<script type="text/x-spyder-skip"></script>
+<script type="text/x-spyder-skip"></script>
+<script type="text/x-spyder-skip"></script>
+<script type="text/x-spyder-wait">
+const ALL = window.PROJECTS || [];
+
+const $tabs = document.getElementById('tabs');
+const $panel = document.getElementById('panel');
+const $edit = document.getElementById('edit-btn');
+const DOW = '일월화수목금토';
+const now = new Date();
+document.getElementById('today').textContent =
+  `${now.getFullYear()}.${String(now.getMonth()+1).padStart(2,'0')}.${String(now.getDate()).padStart(2,'0')} (${DOW[now.getDay()]})`;
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+/* 탭 순서·삭제 상태 (이 브라우저에 저장) */
+const ls = {
+  get(k, d) { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} },
+};
+let order = ls.get('spyder.hub.order', []);
+let hidden = ls.get('spyder.hub.hidden', []);
+let editing = false;
+const byId = id => ALL.find(p => p.id === id);
+function visible() {
+  const ids = [...order.filter(byId), ...ALL.map(p => p.id).filter(id => !order.includes(id))];
+  return ids.filter(id => !hidden.includes(id)).map(byId);
+}
+const saveOrder = list => { order = list.map(p => p.id); ls.set('spyder.hub.order', order); };
+
+let active = 'combine';
+try { active = JSON.parse(localStorage.getItem('spyder.hub.tab')) || 'combine'; } catch (e) { try { active = localStorage.getItem('spyder.hub.tab') || 'combine'; } catch (e2) {} }
+const fixActive = () => { const v = visible(); if (active !== '__add' && !v.some(p => p.id === active)) active = v[0] ? v[0].id : '__add'; };
+fixActive();
+
+const statBox = (l, v, sub, s) => `<div class="stat"><div><div class="l">${l}</div><div class="v">${v}${sub ? `<span style="font-size:16px;color:var(--muted)">${sub}</span>` : ''}</div></div><div class="s">${s}</div></div>`;
+const STATS = {
+  combine() {
+    const rec = window.COMBINE_RECORDS, res = window.COMBINE_RESEARCH;
+    if (!rec) return null;
+    const store = ls.get('spyder.combine.v2', {});
+    const sched = rec.schedule || [];
+    const done = sched.filter(s => s.measured).length;
+    const t = new Date(); t.setHours(0,0,0,0);
+    const next = sched.filter(s => !s.measured && new Date(s.date + 'T00:00:00') >= t).sort((a, b) => a.date.localeCompare(b.date))[0];
+    const research = (res ? res.items.length : 0) + (store.research || []).length;
+    return statBox('측정 완료 학교', done, `/${sched.length}`, `다음 일정<br><b style="color:var(--ink)">${next ? `${esc(next.school)} ${+next.date.slice(5,7)}/${+next.date.slice(8)}` : '없음'}</b>`)
+      + statBox('총 측정 선수', rec.players.length, '', '엑셀 기록<br>자동 동기화')
+      + statBox('축적된 조사 자료', research, '', '매시간<br>AI 리서치');
+  },
+  csr() {
+    const a = window.CSR_ACTIVITIES, r = window.CSR_RESEARCH, p = window.CSR_PROPOSALS;
+    if (!a) return null;
+    const store = ls.get('spyder.csr.v1', {});
+    const people = a.items.reduce((s, x) => s + (x.people || 0), 0);
+    const nR = (r ? r.items.length : 0) + (store.research || []).length;
+    const nP = (p ? p.items.length : 0) + (store.newProposals || []).length;
+    return statBox('인천 2026 CSR 활동', a.items.length, '건', `참여·수혜<br><b style="color:var(--ink)">${people.toLocaleString('ko-KR')}명</b>`)
+      + statBox('타 기관 CSR 사례', nR, '건', '매시간<br>AI 리서치')
+      + statBox('CSR → 매출 기획안', nP, '건', '매시간<br>AI 제안');
+  },
+};
+
+function renderAdd() {
+  $panel.innerHTML = `
+    <div>
+      <span class="badge">NEW WORKSPACE</span>
+      <h2>업무 추가</h2>
+      <p class="desc">새로운 스포츠마케팅 업무를 AI 자동화 시스템으로 추가할 수 있습니다.
+      Claude에게 추가할 업무를 요청하면 이 화면에 새 탭과 전용 자동화 시스템이 만들어집니다.</p>
+      <div class="mods">
+        <div class="mod"><span class="n">STEP 1</span><b>업무 요청</b><small>예) "프로구단 후원 업무 추가해줘"</small></div>
+        <div class="mod"><span class="n">STEP 2</span><b>자료 전달</b><small>관련 엑셀·기획서 등 기초 자료</small></div>
+        <div class="mod"><span class="n">STEP 3</span><b>시스템 생성</b><small>대시보드·리서치·운영 모듈 구성</small></div>
+        <div class="mod"><span class="n">STEP 4</span><b>탭 자동 표시</b><small>첫 페이지에서 바로 접속</small></div>
+      </div>
+    </div>
+    <div class="side-stats">
+      <div class="soon"><b>현재 표시 중인 업무 ${visible().length}개</b>
+      ${visible().map(p => esc(p.name)).join(', ') || '없음'}</div>
+      ${hidden.filter(byId).length ? `<div class="soon"><b>삭제한 탭 ${hidden.filter(byId).length}개</b>
+        <span>업무 데이터는 그대로 남아 있어 복원하면 바로 다시 사용할 수 있습니다.</span>
+        <div class="restore">${hidden.filter(byId).map(id => `<div class="r">${esc(byId(id).name)}<button class="btn btn-ghost btn-sm" data-restore="${id}">복원</button></div>`).join('')}</div></div>` : ''}
+    </div>`;
+}
+
+function tabHtml(p, i, n) {
+  if (!editing) return `
+    <button class="tab ${p.id === active ? 'on' : ''}" role="tab" data-id="${p.id}">
+      <span class="st ${p.status === 'live' ? 'live' : ''}"></span>${esc(p.name)}
+    </button>`;
+  return `
+    <div class="tab edit" draggable="true" data-drag="${p.id}">
+      <span class="grip">⋮⋮</span>${esc(p.name)}
+      <span class="ctl">
+        <button title="왼쪽으로" data-mv="-1" data-pid="${p.id}" ${i === 0 ? 'disabled' : ''}>‹</button>
+        <button title="오른쪽으로" data-mv="1" data-pid="${p.id}" ${i === n - 1 ? 'disabled' : ''}>›</button>
+        <button class="del" title="삭제" data-del="${p.id}">×</button>
+      </span>
+    </div>`;
+}
+
+function render() {
+  const list = visible();
+  $tabs.classList.toggle('editing', editing);
+  $edit.textContent = editing ? '편집 완료' : '탭 편집';
+  $edit.classList.toggle('btn-ghost', !editing);
+  document.getElementById('edit-hint').hidden = !editing;
+  $tabs.innerHTML = list.map((p, i) => tabHtml(p, i, list.length)).join('') +
+    `<button class="tab add ${active === '__add' ? 'on' : ''}" data-id="__add">+ 업무 추가</button>`;
+
+  if (active === '__add') { renderAdd(); return; }
+  const p = byId(active);
+  const live = p.status === 'live';
+  const stats = live && STATS[p.id] ? STATS[p.id]() : null;
+
+  $panel.innerHTML = `
+    <img class="panel-mark" src="assets/img/spyder-spider.png" alt="">
+    <div>
+      <span class="badge dot ${live ? 'b-ok' : ''}">${live ? '운영 중' : '준비 중'}</span>
+      <h2>${p.name}</h2>
+      <p class="desc">${p.desc}</p>
+      <div class="mods">
+        ${p.modules.map(m => `<div class="mod"><span class="n">${m[0]}</span><b>${m[1]}</b><small>${m[2]}</small></div>`).join('')}
+      </div>
+      <div class="cta">
+        ${live
+          ? `<a class="btn" href="${p.url}">자동화 시스템 열기 →</a>`
+          : `<button class="btn" disabled>오픈 준비 중</button><span class="muted" style="font-size:13px">BASEBALL COMBINE 시스템 구조를 기반으로 확장 예정</span>`}
+      </div>
+    </div>
+    <div class="side-stats">
+      ${stats ? stats : `
+        <div class="soon"><b>워크스페이스 준비 중</b>
+        이 업무의 자동화 시스템은 추후 추가됩니다. 오픈되면 이 탭에서 바로 접속할 수 있습니다.</div>
+      `}
+    </div>`;
+}
+
+const setActive = id => { active = id; ls.set('spyder.hub.tab', active); };
+
+$edit.addEventListener('click', () => { editing = !editing; render(); });
+
+function move(id, to) {
+  const list = visible();
+  const from = list.findIndex(p => p.id === id);
+  if (from < 0 || to < 0 || to >= list.length) return;
+  const [item] = list.splice(from, 1);
+  list.splice(to, 0, item);
+  // 숨긴 탭의 원래 위치는 뒤쪽에 보존
+  saveOrder([...list, ...hidden.filter(byId).map(byId)]);
+  render();
+}
+
+$tabs.addEventListener('click', e => {
+  const mv = e.target.closest('[data-mv]');
+  if (mv) { const id = mv.dataset.pid; move(id, visible().findIndex(p => p.id === id) + Number(mv.dataset.mv)); return; }
+  const del = e.target.closest('[data-del]');
+  if (del) {
+    const p = byId(del.dataset.del);
+    if (!confirm(`'${p.name}' 탭을 삭제할까요?\n업무 데이터는 그대로 남고, '업무 추가' 탭에서 언제든 복원할 수 있습니다.`)) return;
+    hidden = [...new Set([...hidden, p.id])];
+    ls.set('spyder.hub.hidden', hidden);
+    fixActive(); ls.set('spyder.hub.tab', active);
+    render();
+    return;
+  }
+  const b = e.target.closest('.tab[data-id]');
+  if (!b) return;
+  setActive(b.dataset.id);
+  render();
+});
+
+/* 드래그로 순서 변경 */
+let dragId = null;
+$tabs.addEventListener('dragstart', e => {
+  const t = e.target.closest('[data-drag]'); if (!t) return;
+  dragId = t.dataset.drag; t.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+  try { e.dataTransfer.setData('text/plain', dragId); } catch (err) {}
+});
+$tabs.addEventListener('dragover', e => {
+  const t = e.target.closest('[data-drag]'); if (!t || !dragId) return;
+  e.preventDefault();
+  $tabs.querySelectorAll('.over').forEach(x => x.classList.remove('over'));
+  if (t.dataset.drag !== dragId) t.classList.add('over');
+});
+$tabs.addEventListener('drop', e => {
+  const t = e.target.closest('[data-drag]'); if (!t || !dragId) return;
+  e.preventDefault();
+  move(dragId, visible().findIndex(p => p.id === t.dataset.drag));
+});
+$tabs.addEventListener('dragend', () => { dragId = null; render(); });
+
+$panel.addEventListener('click', e => {
+  const r = e.target.closest('[data-restore]');
+  if (!r) return;
+  hidden = hidden.filter(id => id !== r.dataset.restore);
+  ls.set('spyder.hub.hidden', hidden);
+  setActive(r.dataset.restore);
+  render();
+});
+
+render();
+</script>
+</body>
+</html>

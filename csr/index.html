@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CSR · SPYDER AI</title>
+<link rel="icon" type="image/png" href="../assets/img/spyder-spider.png">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="stylesheet" href="../assets/css/base.css">
+<link rel="stylesheet" href="../combine/app.css">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<div class="bg-orbs"></div>
+
+<div class="app">
+  <aside class="side">
+    <a class="brand" href="../index.html"><img src="../assets/img/spyder-wordmark.png" alt="SPYDER"><span>AI WORKSPACE</span></a>
+    <div class="proj">
+      <img class="proj-mark inv" src="../assets/img/spyder-spider.png" alt="">
+      <small>PROJECT</small>
+      <b>CSR · INCHEON UNITED</b>
+    </div>
+    <nav class="nav" id="nav"></nav>
+    <div class="side-foot">
+      <a class="nav-link" href="../index.html" id="back-hub"></a>
+    </div>
+  </aside>
+
+  <main>
+    <header class="top">
+      <div>
+        <div class="eyebrow" id="crumb"></div>
+        <h1 id="title"></h1>
+      </div>
+      <div class="top-right">
+        <span class="today" id="today"></span>
+        <button class="btn btn-ghost btn-sm" data-act="settings" id="btn-settings"></button>
+      </div>
+    </header>
+    <section class="view" id="view"></section>
+  </main>
+</div>
+
+<div id="modal-root"></div>
+<div class="toast" id="toast"></div>
+<div id="print-root"></div>
+
+<script src="../assets/app-version.js"></script>
+<script src="activities.js"></script>
+<script src="research.js"></script>
+<script src="proposals.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

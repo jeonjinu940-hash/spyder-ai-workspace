@@ -1,0 +1,47 @@
+/* CSR 워크스페이스 전용 (공통 레이아웃은 ../combine/app.css) */
+.rev { display: inline-flex; align-items: center; gap: 4px; height: 24px; padding: 0 9px; margin: 0 4px 4px 0; border-radius: 999px; background: var(--line-soft); font-size: 12px; font-weight: 600; color: var(--ink-2); }
+.rev .icon { width: 13px; height: 13px; }
+
+.stage { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.stage > div { border: 1px solid var(--line); border-radius: 12px; padding: 14px; background: #fff; display: flex; flex-direction: column; gap: 2px; }
+.stage > div.on { background: var(--ink); color: #fff; border-color: var(--ink); }
+.stage b { font-size: 26px; letter-spacing: -.03em; line-height: 1.1; }
+.stage span { font-size: 12px; opacity: .7; }
+
+.board { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; align-items: start; }
+.board .col { background: rgba(255,255,255,.55); border: 1px solid var(--line); border-radius: 16px; padding: 12px; display: flex; flex-direction: column; gap: 8px; min-height: 160px; }
+.board .col-h { display: flex; justify-content: space-between; align-items: center; padding: 2px 4px 6px; font-size: 13px; }
+.board .col-h span { color: var(--muted); font-weight: 600; }
+.kcard { text-align: left; background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 13px 14px; transition: .12s; }
+.kcard:hover { border-color: var(--ink); box-shadow: var(--shadow); }
+.kcard .t { font-weight: 700; font-size: 13.5px; line-height: 1.4; }
+.kcard .d { font-size: 12px; color: var(--muted); margin-top: 4px; }
+.kcard .late { color: var(--danger); font-weight: 700; }
+
+.checks { display: flex; flex-direction: column; gap: 2px; }
+.checks label { display: flex; gap: 10px; align-items: flex-start; padding: 9px 4px; border-top: 1px solid var(--line-soft); font-size: 13px; cursor: pointer; }
+.checks label:first-child { border-top: 0; }
+.checks input { margin-top: 3px; accent-color: var(--ink); }
+.checks input:checked + span { color: var(--muted); text-decoration: line-through; }
+.chk { display: inline-flex; gap: 6px; align-items: center; font-size: 13px; margin-right: 10px; }
+.chk input { accent-color: var(--ink); }
+
+.tbl.wrap td { white-space: normal; font-size: 13px; line-height: 1.45; }
+.tbl.wrap td:first-child { min-width: 180px; }
+.tbl.wrap td:nth-child(3) { white-space: nowrap; }
+
+/* 인천유나이티드 기획안 PPT: SPYDER 거미 워터마크 대신 텍스트 태그 */
+.slide.cover::after { display: none; }
+.slide-tag { font-size: 1.8cqw; letter-spacing: .12em; }
+
+/* AI 기획안 작성 요청 상태 */
+.ai-state { display: flex; gap: 12px; align-items: center; border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; margin: 4px 0 14px; background: var(--line-soft); font-size: 13px; }
+.ai-state b { display: block; font-size: 13.5px; margin-bottom: 2px; }
+.ai-state .grow { flex: 1; }
+.ai-state.fail { border-color: var(--danger); background: #fff; }
+.spin { width: 18px; height: 18px; flex: none; border: 2px solid var(--line); border-top-color: var(--ink); border-radius: 50%; animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+@media (max-width: 900px) {
+  .board, .stage { grid-template-columns: 1fr; }
+}

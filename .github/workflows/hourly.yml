@@ -1,0 +1,38 @@
+# 원본: OneDrive tools/cloud/hourly.yml (tools/cloud-sync.js 가 .github/workflows/ 로 복사)
+# 매시간 :30 — 최근 75분 안에 PC 실행 기록이 없으면(PC·노트북 모두 꺼짐) 클라우드에서 AI 리서치·제안 실행
+name: hourly-ai
+on:
+  schedule:
+    - cron: '30 * * * *'
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'PC 실행 여부와 관계없이 실행'
+        type: boolean
+        default: false
+permissions:
+  contents: write
+concurrency:
+  group: hourly-ai
+  cancel-in-progress: false
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - id: gate
+        run: node tools/cloud-run.js --check
+        env:
+          FORCE: ${{ inputs.force }}
+      - if: steps.gate.outputs.run == 'true'
+        run: npm install -g @anthropic-ai/claude-code
+      - if: steps.gate.outputs.run == 'true'
+        run: node tools/cloud-run.js --run
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          WEB_PASSWORD: ${{ secrets.WEB_PASSWORD }}
+          CLAUDE_BIN: claude
