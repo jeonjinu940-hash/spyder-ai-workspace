@@ -103,7 +103,7 @@ const prio = v => (['높음', '중간', '낮음'].includes(v) ? v : '중간');
   const data = readDataFile(OUT, { updatedAt: '', marketing: [], sns: [] });
   log(`제안 생성 시작 (MARKETING ${data.marketing.length} / SNS ${data.sns.length})`);
   let text;
-  try { text = await runClaude(buildPrompt(data), [], 15); }
+  try { text = await runClaude(buildPrompt(data), [], 20); }
   catch (e) { log('실패: ' + e.message); process.exit(1); }
   const out = extractJson(text);
   if (!out) { log('실패: JSON 파싱 불가'); process.exit(1); }
