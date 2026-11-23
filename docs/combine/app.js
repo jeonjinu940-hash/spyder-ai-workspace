@@ -38,6 +38,7 @@
     close: '<path d="M6 6l12 12M18 6 6 18"/>',
     back: '<path d="M15 18l-6-6 6-6"/>',
     print: '<path d="M6 9V3h12v6"/><rect x="3" y="9" width="18" height="8" rx="2"/><path d="M6 14h12v7H6z"/>',
+    download: '<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>',
     spark: '<path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M6 18l2.5-2.5M15.5 8.5 18 6"/>',
     edit: '<path d="M4 20h4L19 9l-4-4L4 16z"/>',
     trophy: '<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/>',
@@ -808,24 +809,31 @@
     closeModal(); render(); toast('기획안이 저장되었습니다.');
   }
 
-  /* PPT 미리보기 */
-  function slidesHtml(p) {
+  /* PPT 기획안 — 공통 엔진(assets/js/proposal-deck.js)에 넘길 구성 */
+  function deckOf(p) {
     const rmap = Object.fromEntries(research().map(r => [r.id, r]));
     const rs = (p.research || []).map(id => rmap[id]).filter(Boolean);
-    const ul = arr => arr.length ? `<ul>${arr.map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : '<span>-</span>';
-    const S = [
-      ['cover', '', esc(p.title), `<span>SPYDER Korea · BASEBALL COMBINE 마케팅 기획안</span><span>${fmtFull(TODAY_ISO)}</span>`],
-      ['', '01', '프로젝트 배경 및 목적', `<p>${esc(p.background)}</p><p><b>목표</b> ${esc(p.goal)}</p><p><b>타깃</b> ${esc(p.target)}</p>`],
-      ['', '02', '시장 및 경쟁사 분석', rs.length ? ul(rs.map(r => `[${r.source}] ${r.summary}`)) : '<span>연결된 조사 자료 없음</span>'],
-      ['', '03', '마케팅 인사이트', rs.length ? ul(rs.map(r => r.insight)) : '<span>-</span>'],
-      ['', '04', '핵심 전략 및 아이디어', `<p>${esc(p.strategy)}</p>`],
-      ['', '05', '세부 실행 방안', ul(p.actions || [])],
-      ['', '06', '예상 비용 및 기대 효과', `<table class="tbl-s">${(p.budget || []).map(b => `<tr><td>${esc(b.item)}</td><td>${esc(b.cost)}</td></tr>`).join('')}</table><p style="margin-top:1.5cqw"><b>기대 효과</b> ${esc(p.effect)}</p>`],
-      ['', '07', '성과 측정 지표 (KPI)', `<table class="tbl-s">${(p.kpis || []).map(k => `<tr><td>${esc(k.name)}</td><td>${esc(k.target)}</td></tr>`).join('')}</table>`],
-    ];
-    return S.map(([c, n, t, b]) => `<div class="slide ${c}">${n
-      ? `<div class="sn"><span>${n}</span><img class="slide-logo" src="${LOGO}" alt="SPYDER"></div>`
-      : `<div class="sn" style="color:rgba(255,255,255,.5)"><img class="slide-logo" src="${LOGO}" alt="SPYDER"><span>MARKETING PROPOSAL</span></div>`}<h5>${t}</h5><div class="body">${b}</div></div>`).join('');
+    return {
+      brand: 'BASEBALL COMBINE', kind: 'MARKETING PROPOSAL',
+      title: p.title, subtitle: p.goal || p.strategy, fileName: `BASEBALL COMBINE 기획안_${p.title}`,
+      info: [['ORGANIZATION', 'SPYDER Korea'], ['PROJECT', 'BASEBALL COMBINE'], ['DATE', fmtFull(TODAY_ISO)]],
+      closing: { title: 'THANK YOU', text: `${p.title}\nSPYDER Korea · Sports Marketing Team` },
+      slides: [
+        { type: 'cover' },
+        { type: 'overview', no: '01', en: 'Background', title: '프로젝트 배경 및 목적', lead: p.background,
+          items: [{ label: 'Goal · 목표', text: p.goal }, { label: 'Target · 타깃', text: p.target }] },
+        { type: 'divider', no: '02', en: 'Research', title: '시장 및 경쟁사 분석', optional: true },
+        { type: 'cases', no: '02', en: 'Market Analysis', title: '시장 및 경쟁사 분석', items: rs.map(r => ({ tag: r.source, title: r.title, text: r.summary })), empty: '연결된 조사 자료 없음' },
+        { type: 'insights', no: '03', en: 'Insight', title: '마케팅 인사이트', items: rs.map(r => r.insight).filter(Boolean), optional: true },
+        { type: 'divider', no: '04', en: 'Strategy', title: '핵심 전략 및 아이디어', align: 'right' },
+        { type: 'statement', no: '04', en: 'Core Strategy', title: '핵심 전략 및 아이디어', text: p.strategy },
+        { type: 'steps', no: '05', en: 'Execution', title: '세부 실행 방안', items: p.actions || [] },
+        { type: 'table', no: '06', en: 'Budget & Effect', title: '예상 비용 및 기대 효과', head: ['Item · 항목', 'Budget · 비용'],
+          rows: (p.budget || []).map(b => [b.item, b.cost]), notes: [{ label: 'Expected Effect · 기대 효과', text: p.effect }] },
+        { type: 'kpi', no: '07', en: 'KPI', title: '성과 측정 지표', items: p.kpis || [] },
+        { type: 'closing' },
+      ].filter(s => !(s.type === 'divider' && s.optional && !rs.length)),
+    };
   }
   function openSnsPreview(id) {
     const p = allProposals().find(x => x.id === id);
@@ -848,11 +856,18 @@
   }
 
   function openPPT(id) {
-    const p = allProposals().find(x => x.id === id);
-    modal(`${mHead('PPT 기획안 · 8 slides', esc(p.title))}
-      <div class="slides">${slidesHtml(p)}</div>
-      <div class="modal-f"><span class="muted" style="font-size:12px;margin-right:auto;align-self:center">인쇄 대화상자에서 'PDF로 저장'을 선택하면 가로형 기획안 PDF로 저장됩니다.</span>
-      <button class="btn btn-ghost" data-act="close">닫기</button><button class="btn" data-act="print" data-id="${id}">${icon('print', 'icon-sm')} PDF 저장 / 인쇄</button></div>`, true);
+    const p = allProposals().find(x => x.id === id), deck = deckOf(p);
+    modal(`${mHead(`PPT 기획안 · ${ProposalDeck.count(deck)} slides`, esc(p.title))}
+      ${ProposalDeck.preview(deck)}
+      <div class="modal-f"><span class="muted" style="font-size:12px;margin-right:auto;align-self:center">PPT의 텍스트·도형은 모두 개별 편집됩니다. 이미지 자리는 도형 우클릭 → 채우기 → 그림으로 사진을 넣으세요.</span>
+      <button class="btn btn-ghost" data-act="close">닫기</button><button class="btn btn-ghost" data-act="print" data-id="${id}">${icon('print', 'icon-sm')} PDF 저장</button><button class="btn" data-act="pptx" data-id="${id}">${icon('download', 'icon-sm')} PPT 다운로드</button></div>`, true);
+  }
+  async function downloadPPT(el) {
+    const p = allProposals().find(x => x.id === el.dataset.id);
+    el.disabled = true; const label = el.innerHTML; el.textContent = 'PPT 생성 중…';
+    try { await ProposalDeck.download(deckOf(p)); toast('PPT 파일을 다운로드했습니다.'); }
+    catch (e) { toast(e.message || 'PPT 생성에 실패했습니다.'); }
+    finally { el.disabled = false; el.innerHTML = label; }
   }
 
   /* 설정 */
@@ -919,9 +934,10 @@
     editProposal: el => openProposalForm(el.dataset.id),
     saveProposal: el => saveProposal(el.dataset.id),
     ppt: el => openPPT(el.dataset.id),
+    pptx: downloadPPT,
     print: el => {
       const p = allProposals().find(x => x.id === el.dataset.id);
-      $('#print-root').innerHTML = slidesHtml(p);
+      $('#print-root').innerHTML = ProposalDeck.printHtml(deckOf(p));
       document.body.classList.add('printing');
       window.print();
       document.body.classList.remove('printing');

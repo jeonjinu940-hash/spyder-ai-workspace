@@ -39,6 +39,7 @@
     close: '<path d="M6 6l12 12M18 6 6 18"/>',
     back: '<path d="M15 18l-6-6 6-6"/>',
     print: '<path d="M6 9V3h12v6"/><rect x="3" y="9" width="18" height="8" rx="2"/><path d="M6 14h12v7H6z"/>',
+    download: '<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>',
     spark: '<path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M6 18l2.5-2.5M15.5 8.5 18 6"/>',
     edit: '<path d="M4 20h4L19 9l-4-4L4 16z"/>',
     won: '<path d="M4 6l3 12 3-9 2 0 3 9 3-12"/><path d="M3 11h18"/>',
@@ -608,33 +609,51 @@
     closeModal(); render(); toast('기획안이 저장되었습니다.');
   }
 
-  /* PPT 미리보기 */
-  function slidesHtml(p) {
+  /* PPT 기획안 — 공통 엔진(assets/js/proposal-deck.js)에 넘길 구성 */
+  function deckOf(p) {
     const rmap = Object.fromEntries(research().map(r => [r.id, r]));
     const rs = (p.research || []).map(id => rmap[id]).filter(Boolean);
     const m = actMap(), la = (p.linked || []).map(id => m[id]).filter(Boolean);
-    const ul = arr => arr.length ? `<ul>${arr.map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : '<span>-</span>';
-    const S = [
-      ['cover', '', esc(p.title), `<span>인천유나이티드 · CSR 기획안</span><span>${fmtFull(TODAY_ISO)}</span>`],
-      ['', '01', '배경 및 목적', `<p>${esc(p.background)}</p><p><b>목표</b> ${esc(p.goal)}</p><p><b>타깃</b> ${esc(p.target)}</p>`],
-      ['', '02', '벤치마킹 사례', rs.length ? ul(rs.map(r => `[${r.org || r.source}] ${r.summary}${r.result ? ` (성과: ${r.result})` : ''}`)) : '<span>연결된 사례 없음</span>'],
-      ['', '03', '인천유나이티드 현황 연계', la.length ? ul(la.map(a => `${a.name} — ${a.result}`)) : `<p>${esc(p.area || '')}</p>`],
-      ['', '04', '핵심 전략', `<p>${esc(p.strategy)}</p>${(p.partners || []).length ? `<p><b>협력 기관</b> ${esc(p.partners.join(', '))}</p>` : ''}`],
-      ['', '05', '세부 실행 방안', ul(p.actions || [])],
-      ['', '06', '매출 연결 구조', `<p>${esc(p.revenueModel)}</p><p><b>매출 유형</b> ${esc((p.revenue || []).join(' · '))}</p>`],
-      ['', '07', '예산 · 일정 · 기대 효과', `<table class="tbl-s">${(p.budget || []).map(b => `<tr><td>${esc(b.item)}</td><td>${esc(b.cost)}</td></tr>`).join('')}</table><p><b>일정</b> ${esc(p.timeline)}</p><p><b>기대 효과</b> ${esc(p.effect)}</p>`],
-      ['', '08', '성과 측정 지표 (KPI)', `<table class="tbl-s">${(p.kpis || []).map(k => `<tr><td>${esc(k.name)}</td><td>${esc(k.target)}</td></tr>`).join('')}</table>`],
-    ];
-    return S.map(([c, n, t, b]) => `<div class="slide ${c}">${n
-      ? `<div class="sn"><span>${n}</span><span class="slide-tag">INCHEON UNITED CSR</span></div>`
-      : `<div class="sn" style="color:rgba(255,255,255,.5)"><span>INCHEON UNITED</span><span>CSR PROPOSAL</span></div>`}<h5>${t}</h5><div class="body">${b}</div></div>`).join('');
+    return {
+      brand: 'INCHEON UNITED', kind: 'CSR PROPOSAL',
+      title: p.title, subtitle: p.goal || p.strategy, fileName: `인천유나이티드 CSR 기획안_${p.title}`,
+      info: [['CLUB', '인천유나이티드'], ['AREA', p.area || 'CSR'], ['DATE', fmtFull(TODAY_ISO)]],
+      closing: { title: 'THANK YOU', text: `${p.title}\n인천유나이티드 · CSR` },
+      slides: [
+        { type: 'cover' },
+        { type: 'overview', no: '01', en: 'Background', title: '배경 및 목적', lead: p.background,
+          items: [{ label: 'Goal · 목표', text: p.goal }, { label: 'Target · 타깃', text: p.target }] },
+        ...(rs.length ? [{ type: 'divider', no: '02', en: 'Benchmark', title: '벤치마킹 사례' }] : []),
+        { type: 'cases', no: '02', en: 'Benchmark Cases', title: '벤치마킹 사례',
+          items: rs.map(r => ({ tag: [r.org, r.source].filter(Boolean).join(' · '), title: r.title, text: [r.summary, r.result && `성과: ${r.result}`].filter(Boolean).join('\n') })), empty: '연결된 사례 없음' },
+        { type: 'insights', no: '03', en: 'Incheon United Now', title: '인천유나이티드 현황 연계', items: la.map(a => `${a.name}\n${a.result || ''}`.trim()), optional: true },
+        { type: 'divider', no: '04', en: 'Strategy', title: '핵심 전략', align: 'right' },
+        { type: 'statement', no: '04', en: 'Core Strategy', title: '핵심 전략', text: p.strategy,
+          notes: [{ label: 'Partners · 협력 기관', text: (p.partners || []).join(', ') }] },
+        { type: 'steps', no: '05', en: 'Execution', title: '세부 실행 방안', items: p.actions || [] },
+        { type: 'statement', no: '06', en: 'Revenue Model', title: '매출 연결 구조', text: p.revenueModel, mirror: true,
+          notes: [{ label: 'Revenue · 매출 유형', text: (p.revenue || []).join(' · ') }] },
+        { type: 'table', no: '07', en: 'Budget · Timeline · Effect', title: '예산 · 일정 · 기대 효과', head: ['Item · 항목', 'Budget · 비용'],
+          rows: (p.budget || []).map(b => [b.item, b.cost]),
+          notes: [{ label: 'Timeline · 일정', text: p.timeline }, { label: 'Expected Effect · 기대 효과', text: p.effect }] },
+        { type: 'kpi', no: '08', en: 'KPI', title: '성과 측정 지표', items: p.kpis || [] },
+        { type: 'closing' },
+      ],
+    };
   }
   function openPPT(id) {
-    const p = proposals().find(x => x.id === id);
-    modal(`${mHead('PPT 기획안 · 9 slides', esc(p.title))}
-      <div class="slides">${slidesHtml(p)}</div>
-      <div class="modal-f"><span class="muted" style="font-size:12px;margin-right:auto;align-self:center">인쇄 대화상자에서 'PDF로 저장'을 선택하면 가로형 기획안 PDF로 저장됩니다.</span>
-      <button class="btn btn-ghost" data-act="close">닫기</button><button class="btn" data-act="print" data-id="${id}">${icon('print', 'icon-sm')} PDF 저장 / 인쇄</button></div>`, true);
+    const p = proposals().find(x => x.id === id), deck = deckOf(p);
+    modal(`${mHead(`PPT 기획안 · ${ProposalDeck.count(deck)} slides`, esc(p.title))}
+      ${ProposalDeck.preview(deck)}
+      <div class="modal-f"><span class="muted" style="font-size:12px;margin-right:auto;align-self:center">PPT의 텍스트·도형은 모두 개별 편집됩니다. 이미지 자리는 도형 우클릭 → 채우기 → 그림으로 사진을 넣으세요.</span>
+      <button class="btn btn-ghost" data-act="close">닫기</button><button class="btn btn-ghost" data-act="print" data-id="${id}">${icon('print', 'icon-sm')} PDF 저장</button><button class="btn" data-act="pptx" data-id="${id}">${icon('download', 'icon-sm')} PPT 다운로드</button></div>`, true);
+  }
+  async function downloadPPT(el) {
+    const p = proposals().find(x => x.id === el.dataset.id);
+    el.disabled = true; const label = el.innerHTML; el.textContent = 'PPT 생성 중…';
+    try { await ProposalDeck.download(deckOf(p)); toast('PPT 파일을 다운로드했습니다.'); }
+    catch (e) { toast(e.message || 'PPT 생성에 실패했습니다.'); }
+    finally { el.disabled = false; el.innerHTML = label; }
   }
 
   /* 설정 */
@@ -695,9 +714,10 @@
     editProposal: el => openProposalForm(el.dataset.id),
     saveProposal: el => saveProposal(el.dataset.id),
     ppt: el => openPPT(el.dataset.id),
+    pptx: downloadPPT,
     print: el => {
       const p = proposals().find(x => x.id === el.dataset.id);
-      $('#print-root').innerHTML = slidesHtml(p);
+      $('#print-root').innerHTML = ProposalDeck.printHtml(deckOf(p));
       document.body.classList.add('printing');
       window.print();
       document.body.classList.remove('printing');
