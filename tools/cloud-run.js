@@ -33,7 +33,7 @@ log(`데이터 복호화 완료 (${Object.keys((bundle && bundle.files) || {}).l
 
 // 2) 에이전트 실행
 const results = [];
-for (const f of ['research-agent.js', 'proposal-agent.js', 'csr-research-agent.js', 'csr-proposal-agent.js']) {
+for (const f of ['research-agent.js', 'proposal-agent.js', 'csr-research-agent.js', 'csr-proposal-agent.js', 'deck-agent.js']) {
   const t = Date.now();
   const r = spawnSync(process.execPath, [path.join(__dirname, f)], { cwd: ROOT, stdio: 'inherit', timeout: 20 * 60 * 1000 });
   results.push(`${f} ${r.status === 0 ? '성공' : '실패(' + r.status + ')'} ${Math.round((Date.now() - t) / 1000)}초`);

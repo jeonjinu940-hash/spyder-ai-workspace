@@ -6,6 +6,7 @@
 */
 const path = require('path');
 const { ROOT, logger, runClaude, readDataFile, writeDataFile, extractJson, today } = require('./claude-runner');
+const { DECK_SCHEMA, DECK_RULES, cleanDeck } = require('./deck-spec');
 
 const OUT = path.join(ROOT, 'combine', 'proposals.js');
 const log = logger('proposal');
@@ -64,6 +65,9 @@ ${recentTitles || '- 없음'}
 3) 모든 문구는 한국어, SPYDER 톤(프리미엄·스포티·절제된 모노크롬 감성).
 4) 수치 목표는 근거가 약하면 "설정 필요"로 두세요. 사실이 아닌 내용을 사실처럼 쓰지 마세요.
 5) 리서치 id(r-...)는 "research" 배열에만 넣고, 본문 텍스트에는 쓰지 마세요. 근거를 언급할 때는 매체명·사례명으로 쓰세요.
+6) MARKETING 제안마다 PPT 원고 "deck" 을 함께 작성하세요. (cover.title 은 기획안 제목을 22자 이내로 압축, SNS 제안에는 deck 없음)
+
+${DECK_RULES}
 
 [출력 형식] 설명 없이 JSON 객체 하나만 출력:
 {
@@ -73,7 +77,8 @@ ${recentTitles || '- 없음'}
    "strategy": "핵심 전략", "actions": ["실행 방안", "..."],
    "budget": [{"item": "항목", "cost": "금액 또는 협의"}],
    "effect": "기대 효과", "kpis": [{"name": "지표", "target": "목표"}],
-   "research": ["근거 리서치 id"]
+   "research": ["근거 리서치 id"],
+   ${DECK_SCHEMA.replace(/\n/g, '\n   ')}
  }],
  "sns": [{
    "title": "콘텐츠 제목", "priority": "높음|중간|낮음",
@@ -112,9 +117,9 @@ const prio = v => (['높음', '중간', '낮음'].includes(v) ? v : '중간');
     strategy: s(p.strategy), actions: arr(p.actions).map(x => s(x, 500)),
     budget: arr(p.budget).map(b => ({ item: s(b.item, 100), cost: s(b.cost, 100) })),
     effect: s(p.effect), kpis: arr(p.kpis).map(k => ({ name: s(k.name, 100), target: s(k.target, 100) })),
-    research: arr(p.research).map(x => s(x, 60)),
+    research: arr(p.research).map(x => s(x, 60)), deck: cleanDeck(p.deck),
   }));
-  const sn = arr(out.sns).filter(p => p && p.title && !titles.has(p.title)).map((p, i) => ({
+  const sn =arr(out.sns).filter(p => p && p.title && !titles.has(p.title)).map((p, i) => ({
     id: `ps-${stamp}${i}`, type: 'sns', status: '신규 제안', created: now, updated: date, ai: true,
     title: s(p.title, 200), priority: prio(p.priority), channel: s(p.channel, 40), format: s(p.format, 40),
     topic: s(p.topic), goal: s(p.goal), target: s(p.target), timing: s(p.timing, 200),
