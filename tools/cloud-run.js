@@ -23,7 +23,7 @@ if (process.argv.includes('--check')) {
   process.exit(0);
 }
 
-const pw = process.env.WEB_PASSWORD;
+const pw = (process.env.WEB_PASSWORD || '').trim();
 if (!pw) { log('WEB_PASSWORD 없음'); process.exit(1); }
 
 // 1) 복호화 → 평문 데이터 파일 (gitignore 대상)
