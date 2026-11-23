@@ -1,6 +1,7 @@
 /* CSR 에이전트 공통 — 인천 활동 컨텍스트, 기획안 정규화, proposals.js 안전 병합 */
 const path = require('path');
 const { ROOT, readDataFile, writeDataFile } = require('./claude-runner');
+const { DECK_SCHEMA, DECK_RULES, cleanDeck } = require('./deck-spec');
 
 const OUT = path.join(ROOT, 'csr', 'proposals.js');
 const MAX = 1000;
@@ -26,7 +27,8 @@ const PROPOSAL_SCHEMA = `{
   "budget": [{"item": "항목", "cost": "금액 또는 협의"}],
   "effect": "기대 효과(사회적 가치 + 매출)",
   "kpis": [{"name": "지표", "target": "목표"}],
-  "research": ["근거 사례 id"], "linked": ["연계할 인천 활동 id"]
+  "research": ["근거 사례 id"], "linked": ["연계할 인천 활동 id"],
+  ${DECK_SCHEMA.replace(/\n/g, '\n  ')}
 }`;
 
 const s = (v, n = 2000) => String(v ?? '').slice(0, n);
@@ -44,6 +46,7 @@ function normalize(p, extra) {
     budget: arr(p.budget).map(b => ({ item: s(b && b.item, 100), cost: s(b && b.cost, 100) })),
     effect: s(p.effect), kpis: arr(p.kpis).map(k => ({ name: s(k && k.name, 100), target: s(k && k.target, 100) })),
     research: arr(p.research).map(x => s(x, 60)), linked: arr(p.linked).map(x => s(x, 10)),
+    deck: cleanDeck(p.deck),
   };
 }
 
@@ -58,4 +61,13 @@ function addProposals(added) {
   return data.items.length;
 }
 
-module.exports = { OUT, incheon, PROPOSAL_SCHEMA, normalize, arr, readProposals, addProposals };
+/* deck-agent: 기존 기획안에 PPT 원고만 추가 (쓰기 직전 다시 읽어 병합) */
+function patchDecks(decks) {
+  const data = readProposals();
+  let n = 0;
+  for (const p of data.items) if (decks[p.id] && !p.deck) { p.deck = decks[p.id]; n++; }
+  if (n) writeDataFile(OUT, 'CSR_PROPOSALS', data, 'AI CSR 제안 — tools/csr-proposal-agent.js(매시간)·csr-develop-agent.js(사례 발전 요청)가 기획안을 추가합니다.');
+  return n;
+}
+
+module.exports = { OUT, incheon, PROPOSAL_SCHEMA, DECK_RULES, normalize, arr, readProposals, addProposals, patchDecks };

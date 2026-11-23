@@ -6,7 +6,7 @@
 */
 const path = require('path');
 const { ROOT, logger, runClaude, readDataFile, extractJson, today } = require('./claude-runner');
-const { incheon, PROPOSAL_SCHEMA, normalize, arr, readProposals, addProposals } = require('./csr-common');
+const { incheon, PROPOSAL_SCHEMA, DECK_RULES, normalize, arr, readProposals, addProposals } = require('./csr-common');
 
 const log = logger('csr-proposal');
 
@@ -34,6 +34,9 @@ ${recent || '- 없음'}
 3) 모든 문구는 한국어. 실행 주체·협력 기관·시점이 드러나게.
 4) 수치 목표는 근거가 약하면 "설정 필요"로 두세요. 사실이 아닌 내용을 사실처럼 쓰지 마세요.
 5) 사례 id(c-...)와 활동 id(a..)는 "research"·"linked" 배열에만 넣고, 본문 텍스트에는 쓰지 마세요. 근거를 언급할 때는 기관명·사례명으로 쓰세요.
+6) 각 기획안에 PPT 원고 "deck" 을 함께 작성하세요. (cover.title 은 기획안 제목을 22자 이내로 압축)
+
+${DECK_RULES}
 
 [출력 형식] 설명 없이 JSON 배열 하나만 출력:
 [${PROPOSAL_SCHEMA}]`;

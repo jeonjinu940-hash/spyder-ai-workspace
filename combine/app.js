@@ -810,29 +810,17 @@
   }
 
   /* PPT 기획안 — 공통 엔진(assets/js/proposal-deck.js)에 넘길 구성 */
+  /* AI 원고(p.deck)가 있으면 그대로, 없거나 사용자가 내용을 편집했으면 기획안 필드에서 자동 구성 */
+  const userEdited = p => store.newProposals.some(x => x.id === p.id) || Object.keys(store.proposals[p.id] || {}).some(k => !['status', 'updated'].includes(k));
   function deckOf(p) {
     const rmap = Object.fromEntries(research().map(r => [r.id, r]));
     const rs = (p.research || []).map(id => rmap[id]).filter(Boolean);
+    const useAI = p.deck && !userEdited(p);
     return {
-      brand: 'BASEBALL COMBINE', kind: 'MARKETING PROPOSAL',
-      title: p.title, subtitle: p.goal || p.strategy, fileName: `BASEBALL COMBINE 기획안_${p.title}`,
-      info: [['ORGANIZATION', 'SPYDER Korea'], ['PROJECT', 'BASEBALL COMBINE'], ['DATE', fmtFull(TODAY_ISO)]],
-      closing: { title: 'THANK YOU', text: `${p.title}\nSPYDER Korea · Sports Marketing Team` },
-      slides: [
-        { type: 'cover' },
-        { type: 'overview', no: '01', en: 'Background', title: '프로젝트 배경 및 목적', lead: p.background,
-          items: [{ label: 'Goal · 목표', text: p.goal }, { label: 'Target · 타깃', text: p.target }] },
-        { type: 'divider', no: '02', en: 'Research', title: '시장 및 경쟁사 분석', optional: true },
-        { type: 'cases', no: '02', en: 'Market Analysis', title: '시장 및 경쟁사 분석', items: rs.map(r => ({ tag: r.source, title: r.title, text: r.summary })), empty: '연결된 조사 자료 없음' },
-        { type: 'insights', no: '03', en: 'Insight', title: '마케팅 인사이트', items: rs.map(r => r.insight).filter(Boolean), optional: true },
-        { type: 'divider', no: '04', en: 'Strategy', title: '핵심 전략 및 아이디어', align: 'right' },
-        { type: 'statement', no: '04', en: 'Core Strategy', title: '핵심 전략 및 아이디어', text: p.strategy },
-        { type: 'steps', no: '05', en: 'Execution', title: '세부 실행 방안', items: p.actions || [] },
-        { type: 'table', no: '06', en: 'Budget & Effect', title: '예상 비용 및 기대 효과', head: ['Item · 항목', 'Budget · 비용'],
-          rows: (p.budget || []).map(b => [b.item, b.cost]), notes: [{ label: 'Expected Effect · 기대 효과', text: p.effect }] },
-        { type: 'kpi', no: '07', en: 'KPI', title: '성과 측정 지표', items: p.kpis || [] },
-        { type: 'closing' },
-      ].filter(s => !(s.type === 'divider' && s.optional && !rs.length)),
+      meta: { kind: 'MARKETING PROPOSAL', project: 'BASEBALL COMBINE', org: 'SPYDER Korea', date: fmtFull(TODAY_ISO), fileName: `BASEBALL COMBINE 기획안_${p.title}` },
+      content: useAI ? p.deck : null, ai: !!useAI,
+      fallback: ProposalDeck.auto({ title: p.title, goal: p.goal, target: p.target, background: p.background, strategy: p.strategy,
+        actions: p.actions, research: rs, budget: p.budget, effect: p.effect, kpis: p.kpis, result: p.effect }),
     };
   }
   function openSnsPreview(id) {
@@ -858,8 +846,9 @@
   function openPPT(id) {
     const p = allProposals().find(x => x.id === id), deck = deckOf(p);
     modal(`${mHead(`PPT 기획안 · ${ProposalDeck.count(deck)} slides`, esc(p.title))}
+      ${ProposalDeck.toolbar(deck)}
       ${ProposalDeck.preview(deck)}
-      <div class="modal-f"><span class="muted" style="font-size:12px;margin-right:auto;align-self:center">PPT의 텍스트·도형은 모두 개별 편집됩니다. 이미지 자리는 도형 우클릭 → 채우기 → 그림으로 사진을 넣으세요.</span>
+      <div class="modal-f"><span class="muted" style="font-size:12px;margin-right:auto;align-self:center">제안서 템플릿 v2.1에 내용을 채운 파일입니다. 이미지 자리는 도형 우클릭 → 채우기 → 그림으로 사진을 넣으세요.</span>
       <button class="btn btn-ghost" data-act="close">닫기</button><button class="btn btn-ghost" data-act="print" data-id="${id}">${icon('print', 'icon-sm')} PDF 저장</button><button class="btn" data-act="pptx" data-id="${id}">${icon('download', 'icon-sm')} PPT 다운로드</button></div>`, true);
   }
   async function downloadPPT(el) {
