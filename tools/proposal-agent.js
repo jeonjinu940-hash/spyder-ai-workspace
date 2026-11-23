@@ -6,38 +6,12 @@
 */
 const path = require('path');
 const { ROOT, logger, runClaude, readDataFile, writeDataFile, extractJson, today } = require('./claude-runner');
-const { DECK_SCHEMA, DECK_RULES, cleanDeck } = require('./deck-spec');
+const { DECK_SCHEMA, DECK_RULES, cleanDeck, cleanKpis } = require('./deck-spec');
+const { recordsSummary } = require('./combine-data');
 
 const OUT = path.join(ROOT, 'combine', 'proposals.js');
 const log = logger('proposal');
 const MAX_PER_TYPE = 1000;
-
-const METRICS = [
-  ['m55', '55m 직선주루', '초', true], ['m27', '27m 직선주루', '초', true], ['m5', '5m 스타트', '초', true],
-  ['b1', '홈→1루', '초', true], ['b2', '홈→2루', '초', true], ['grip', '악력', 'kg', false],
-];
-
-function recordsSummary() {
-  const rec = readDataFile(path.join(ROOT, 'combine', 'records.js'), { schedule: [], players: [] });
-  const P = rec.players, S = rec.schedule;
-  const t = today();
-  const done = S.filter(s => s.measured), next = S.filter(s => !s.measured && s.date >= t).sort((a, b) => a.date.localeCompare(b.date));
-  const lines = [
-    `측정 완료 ${done.length}/${S.length}개교, 총 ${P.length}명 측정 (1학년 ${P.filter(p => p.grade === 1).length}, 2학년 ${P.filter(p => p.grade === 2).length})`,
-    `최근 측정: ${done.slice(-5).map(s => `${s.school}(${s.date})`).join(', ')}`,
-    `예정 일정: ${next.map(s => `${s.school}(${s.date} ${s.time})`).join(', ') || '없음'}`,
-  ];
-  for (const [k, name, unit, asc] of METRICS) {
-    const top = P.filter(p => p[k] != null).sort((a, b) => (asc ? a[k] - b[k] : b[k] - a[k])).slice(0, 3);
-    if (top.length) lines.push(`${name} TOP3: ${top.map((p, i) => `${i + 1}위 ${p.name}(${p.school} ${p.grade}학년 ${p.pos}) ${p[k]}${unit}`).join(' / ')}`);
-  }
-  const avg = done.map(s => {
-    const v = P.filter(p => p.school === s.school && p.m55 != null).map(p => p.m55);
-    return v.length ? [s.school, v.reduce((a, b) => a + b, 0) / v.length] : null;
-  }).filter(Boolean).sort((a, b) => a[1] - b[1]).slice(0, 3);
-  lines.push(`학교별 55m 평균 TOP3: ${avg.map(([s, v], i) => `${i + 1}위 ${s} ${v.toFixed(3)}초`).join(' / ')}`);
-  return lines.join('\n');
-}
 
 function buildPrompt(data) {
   const research = readDataFile(path.join(ROOT, 'combine', 'research.js'), { items: [] }).items.slice(0, 20);
@@ -63,7 +37,7 @@ ${recentTitles || '- 없음'}
    주제, 실제 게시물에 들어갈 텍스트(장별/씬별 문구, 캡션, 해시태그), 디자인 방향성을 구체적으로.
    측정 데이터(실명 기록)를 활용할 수 있으며, 선수는 고교생이므로 학교·학생 동의를 전제로 하고 비하·비교 표현은 피하세요.
 3) 모든 문구는 한국어, SPYDER 톤(프리미엄·스포티·절제된 모노크롬 감성).
-4) 수치 목표는 근거가 약하면 "설정 필요"로 두세요. 사실이 아닌 내용을 사실처럼 쓰지 마세요.
+4) KPI 는 아래 KPI 산출 규칙대로 데이터 기반 예상 수치로 쓰세요("설정 필요" 금지). 근거 없는 금액·날짜는 만들지 말고, 사실이 아닌 내용을 사실처럼 쓰지 마세요.
 5) 리서치 id(r-...)는 "research" 배열에만 넣고, 본문 텍스트에는 쓰지 마세요. 근거를 언급할 때는 매체명·사례명으로 쓰세요.
 6) MARKETING 제안마다 PPT 원고 "deck" 을 함께 작성하세요. (cover.title 은 기획안 제목을 22자 이내로 압축, SNS 제안에는 deck 없음)
 
@@ -129,9 +103,10 @@ const prio = v => (['높음', '중간', '낮음'].includes(v) ? v : '중간');
     dataPoints: arr(p.dataPoints).map(x => s(x, 200)), research: arr(p.research).map(x => s(x, 60)),
   }));
 
-  data.marketing = [...mk, ...data.marketing].slice(0, MAX_PER_TYPE);
-  data.sns = [...sn, ...data.sns].slice(0, MAX_PER_TYPE);
-  data.updatedAt = now;
-  writeDataFile(OUT, 'COMBINE_PROPOSALS', data, 'AI 제안 — tools/proposal-agent.js 가 매시간 MARKETING·SNS 제안을 추가합니다.');
+  const fresh = readDataFile(OUT, data);   // AI 실행 중 다른 에이전트(기획안으로 발전·원고 보충)가 쓴 내용 보존
+  fresh.marketing = [...mk, ...(fresh.marketing || [])].slice(0, MAX_PER_TYPE);
+  fresh.sns = [...sn, ...(fresh.sns || [])].slice(0, MAX_PER_TYPE);
+  fresh.updatedAt = now;
+  writeDataFile(OUT, 'COMBINE_PROPOSALS', fresh,'AI 제안 — tools/proposal-agent.js 가 매시간 MARKETING·SNS 제안을 추가합니다.');
   log(`완료: MARKETING ${mk.length}건, SNS ${sn.length}건 추가`);
 })();

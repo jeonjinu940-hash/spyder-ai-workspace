@@ -262,7 +262,7 @@
       return header(p) + lead(p.d) + p.d.ideas.map((it, r) => { const dy = 316.4 * r;
         return tx(81.1, 357.9 + dy, null, null, it.label, 'TAG', { mode: 'B' }) + hl(272, 378.5 + dy, 1418, C.rule) +
           ph(86.5, 418.7 + dy, 423.5, 213.3, { soft: true }) + ph(514.6, 418.7 + dy, 423.5, 213.3, { soft: true }) +
-          tx(981, 427.3 + dy, null, null, it.title, 'ITEM_TITLE', { mode: 'B' }) + it.lines.map((l, k) => tx(981, 470.9 + 44.7 * k + dy, null, null, l, 'ITEM_TEXT', { mode: 'B' })).join('');
+          tx(981, 427.3 + dy, null, null, it.title, 'ITEM_TITLE', { mode: 'B' }) + it.lines.map((l, k) => tx(981, 470.9 + 44.7 * k + dy, null, null, `> ${l}`, 'ITEM_TEXT', { mode: 'B' })).join('');
       }).join('');
     },
     execution(p) {
@@ -415,7 +415,7 @@
         const it = p.d.ideas[i];
         if (!it) { remove(byName(doc, g)); return; }
         setText(byName(doc, lb), it.label); setText(byName(doc, tt), it.title);
-        ls.forEach((n, k) => (it.lines[k] ? setText(byName(doc, n), it.lines[k]) : remove(byName(doc, n))));
+        ls.forEach((n, k) => (it.lines[k] ? setText(byName(doc, n), `> ${it.lines[k]}`) : remove(byName(doc, n))));   // 템플릿: 줄 앞 "> " 표시
       });
     },
     execution(doc, p) {
