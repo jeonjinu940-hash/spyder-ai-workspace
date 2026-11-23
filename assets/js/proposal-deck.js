@@ -262,8 +262,8 @@
       const size = CHUNK[s.type], items = (s.items || []).filter(x => x && (typeof x === 'string' ? x.trim() : true));
       if (size && !items.length && s.optional) continue;
       if (!size || items.length <= size) { out.push({ ...s, items }); continue; }
-      const parts = Math.ceil(items.length / size);
-      for (let p = 0; p < parts; p++) out.push({ ...s, items: items.slice(p * size, (p + 1) * size), offset: p * size, title: `${s.title}${p ? ` (${p + 1}/${parts})` : ''}`, summary: p === parts - 1 ? s.summary : '' });
+      const parts = Math.ceil(items.length / size), per = Math.ceil(items.length / parts);   // 장마다 고르게 (6개 → 3+3)
+      for (let p = 0; p < parts; p++) out.push({ ...s, items: items.slice(p * per, (p + 1) * per), offset: p * per, title: `${s.title}${p ? ` (${p + 1}/${parts})` : ''}`, summary: p === parts - 1 ? s.summary : '' });
     }
     return out;
   }
