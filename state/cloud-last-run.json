@@ -1,10 +1,10 @@
 {
- "at": "2026-11-24T22:30:44.040Z",
+ "at": "2026-11-24T23:23:37.392Z",
  "results": [
-  "research-agent.js 성공 46초",
-  "proposal-agent.js 성공 133초",
-  "csr-research-agent.js 성공 58초",
-  "csr-proposal-agent.js 성공 150초",
+  "research-agent.js 성공 26초",
+  "proposal-agent.js 성공 118초",
+  "csr-research-agent.js 성공 53초",
+  "csr-proposal-agent.js 성공 127초",
   "deck-agent.js 성공 0초"
  ]
 }
